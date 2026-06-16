@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>핀테크 마케팅 데이터 시각화 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #8b5cf6;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --dim: #334155;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #0f1f3d 0%, #0a0e1a 60%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px 24px;
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .header-inner { max-width: 1440px; margin: 0 auto; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  .brand-name { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+  .header-title { font-size: 22px; font-weight: 900; margin-top: 8px; letter-spacing: -0.5px; }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 300; }
+  .header-meta { text-align: right; }
+  .meta-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .meta-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent2); }
+
+  /* ── NAV TABS ── */
+  .nav { border-bottom: 1px solid var(--border); background: var(--surface); }
+  .nav-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; display: flex; gap: 0; }
+  .nav-tab {
+    padding: 14px 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+    color: var(--muted); border-bottom: 2px solid transparent; transition: all .2s;
+    white-space: nowrap;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── MAIN LAYOUT ── */
+  .main { max-width: 1440px; margin: 0 auto; padding: 32px 40px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── KPI ROW ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 28px; }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .kpi::before { content:''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent-color, var(--accent)); }
+  .kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; margin: 8px 0 4px; color: var(--text); }
+  .kpi-sub { font-size: 11px; color: var(--muted); }
+  .kpi-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; margin-top: 6px;
+  }
+  .badge-up { background: rgba(16,185,129,.15); color: var(--green); }
+  .badge-dn { background: rgba(239,68,68,.15); color: var(--red); }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 20px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .full { margin-bottom: 20px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .num { 
+    width: 20px; height: 20px; border-radius: 4px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 900; color: white;
+  }
+  .card-desc { font-size: 13px; color: var(--text); margin-bottom: 16px; line-height: 1.8; }
+  .insight-tag {
+    display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 10px;
+    border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px;
+  }
+  .tag-blue { background: rgba(59,130,246,.15); color: var(--accent); border: 1px solid rgba(59,130,246,.3); }
+  .tag-green { background: rgba(16,185,129,.15); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+  .tag-purple { background: rgba(139,92,246,.15); color: var(--accent3); border: 1px solid rgba(139,92,246,.3); }
+  .tag-yellow { background: rgba(245,158,11,.15); color: var(--yellow); border: 1px solid rgba(245,158,11,.3); }
+  .tag-red { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .tag-cyan { background: rgba(6,182,212,.15); color: var(--accent2); border: 1px solid rgba(6,182,212,.3); }
+
+  canvas { max-height: 280px; }
+
+  /* ── FUNNEL ── */
+  .funnel-wrap { padding: 8px 0; }
+  .funnel-step {
+    display: flex; align-items: center; margin-bottom: 8px; gap: 12px;
+  }
+  .funnel-bar-wrap { flex: 1; background: var(--dim); border-radius: 4px; overflow: hidden; height: 32px; position: relative; }
+  .funnel-bar {
+    height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+    transition: width 1s ease;
+  }
+  .funnel-label { font-size: 11px; color: var(--muted); width: 80px; text-align: right; flex-shrink: 0; }
+  .funnel-pct { font-size: 11px; color: var(--muted); width: 50px; text-align: left; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+  .arrow-down { text-align: center; color: var(--dim); font-size: 14px; margin: -2px 0; padding-left: 92px; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(30,45,69,.5); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(59,130,246,.05); }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── INSIGHT LIST ── */
+  .insight-list { list-style: none; }
+  .insight-item {
+    display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .insight-item:last-child { border-bottom: none; }
+  .insight-num {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 900; color: white;
+  }
+  .insight-content { flex: 1; }
+  .insight-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .insight-body { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  /* ── COMPARISON BAR ── */
+  .cmp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .cmp-label { font-size: 12px; color: var(--muted); width: 90px; flex-shrink: 0; }
+  .cmp-bar-wrap { flex: 1; background: var(--dim); border-radius: 3px; height: 20px; overflow: hidden; }
+  .cmp-bar { height: 100%; border-radius: 3px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
+  .cmp-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; }
+
+  .section-title {
+    font-size: 16px; font-weight: 900; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .section-title span { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+  /* color-coding channels */
+  .ch-google { color: #3b82f6; }
+  .ch-naver { color: #10b981; }
+  .ch-fb { color: #8b5cf6; }
+
+  .highlight-box {
+    background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
+    border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+  }
+  .highlight-box p { font-size: 12px; color: var(--accent2); line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div>
+        <div class="brand">
+          <div class="brand-dot"></div>
+          <span class="brand-name">Kookmin University · 데이터 시각화 기말고사</span>
+        </div>
+        <div class="header-title">핀테크 마케팅 데이터 시각화 대시보드</div>
+        <div class="header-sub">2025년 1월 ~ 12월 · 3채널 · 109,500 레코드 분석</div>
+      </div>
+      <div class="header-meta">
+        <div class="meta-label">총 광고비</div>
+        <div class="meta-val">273.2억</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-inner">
+    <div class="nav-tab active" onclick="switchPage('overview')">📊 전체 개요</div>
+    <div class="nav-tab" onclick="switchPage('channel')">📡 채널 분석</div>
+    <div class="nav-tab" onclick="switchPage('funnel')">🔻 퍼널 분석</div>
+    <div class="nav-tab" onclick="switchPage('creative')">🎨 소재 분석</div>
+    <div class="nav-tab" onclick="switchPage('insights')">💡 10대 인사이트</div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ══════════════════ PAGE 1: OVERVIEW ══════════════════ -->
+<div class="page active" id="page-overview">
+
+  <div class="kpi-row">
+    <div class="kpi" style="--accent-color: #3b82f6">
+      <div class="kpi-label">총 광고노출</div>
+      <div class="kpi-val">45.5억</div>
+      <div class="kpi-sub">Impressions</div>
+      <span class="kpi-badge badge-up">연간 누적</span>
+    </div>
+    <div class="kpi" style="--accent-color: #06b6d4">
+      <div class="kpi-label">총 광고클릭</div>
+      <div class="kpi-val">4,703만</div>
+      <div class="kpi-sub">평균 CTR 1.03%</div>
+      <span class="kpi-badge badge-up">전체평균</span>
+    </div>
+    <div class="kpi" style="--accent-color: #10b981">
+      <div class="kpi-label">앱 설치</div>
+      <div class="kpi-val">2,645만</div>
+      <div class="kpi-sub">CPI 평균 1,033원</div>
+      <span class="kpi-badge badge-up">설치전환율 56.2%</span>
+    </div>
+    <div class="kpi" style="--accent-color: #8b5cf6">
+      <div class="kpi-label">최종 회원가입</div>
+      <div class="kpi-val">1,840만</div>
+      <div class="kpi-sub">CPR 평균 1,484원</div>
+      <span class="kpi-badge badge-up">가입전환율 69.6%</span>
+    </div>
+    <div class="kpi" style="--accent-color: #f59e0b">
+      <div class="kpi-label">반복사용 전환</div>
+      <div class="kpi-val">462만</div>
+      <div class="kpi-sub">첫거래→반복 63.7%</div>
+      <span class="kpi-badge badge-dn">개선 필요</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="num">1</span> 월별 광고노출 추이</div>
+      <div class="insight-tag tag-blue">시즌 패턴</div>
+      <canvas id="monthlyImpressions"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="num">2</span> 월별 CPC 추이</div>
+      <div class="insight-tag tag-yellow">비용 패턴</div>
+      <canvas id="monthlyCPC"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">채널별 광고비 점유율</div>
+      <canvas id="channelBudgetPie"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">채널별 CTR 비교</div>
+      <canvas id="channelCTR"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">캠페인 목표별 성과</div>
+      <canvas id="objectiveBar"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="num">3</span> 월별 앱설치 vs 회원가입</div>
+      <div class="insight-tag tag-green">전환 추이</div>
+      <canvas id="monthlyConversion"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="num">4</span> 분기별 광고비 vs 성과 종합</div>
+      <div class="insight-tag tag-purple">투자 효율</div>
+      <canvas id="quarterlyPerf"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE 2: CHANNEL ══════════════════ -->
+<div class="page" id="page-channel">
+  <div class="section-title">채널별 상세 분석 <span>구글 · 페이스북 · 네이버검색 비교</span></div>
+
+  <div class="kpi-row" style="grid-template-columns: repeat(3,1fr)">
+    <div class="kpi" style="--accent-color:#3b82f6">
+      <div class="kpi-label">구글 CPI</div>
+      <div class="kpi-val">384원</div>
+      <div class="kpi-sub">광고비 68.1억</div>
+      <span class="kpi-badge badge-up">3채널 중 최저</span>
+    </div>
+    <div class="kpi" style="--accent-color:#8b5cf6">
+      <div class="kpi-label">페이스북 CPI</div>
+      <div class="kpi-val">548원</div>
+      <div class="kpi-sub">광고비 115.9억</div>
+      <span class="kpi-badge">중간</span>
+    </div>
+    <div class="kpi" style="--accent-color:#ef4444">
+      <div class="kpi-label">네이버검색 CPI</div>
+      <div class="kpi-val">2,280원</div>
+      <div class="kpi-sub">광고비 89.1억</div>
+      <span class="kpi-badge badge-dn">6배 비효율</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="num">5</span> 채널별 CPI 월간 추이</div>
+      <div class="insight-tag tag-red">네이버 고비용 구조</div>
+      <canvas id="channelCPITrend"></canvas>
+      <div class="highlight-box">
+        <p>📌 네이버검색의 CPI는 연간 평균 2,280원으로 구글(384원) 대비 <strong>5.9배 높음</strong>. 브랜드키워드 특성상 경쟁 입찰로 단가 상승이 구조적. 예산 재배분 필요.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="num">6</span> 채널별 CTR vs CPC 포지셔닝</div>
+      <div class="insight-tag tag-cyan">효율성 매트릭스</div>
+      <canvas id="channelScatter"></canvas>
+      <div class="highlight-box">
+        <p>📌 구글은 CTR 0.63%로 낮지만 CPC 384원으로 최저비용. 네이버는 CTR 11.1%로 최고지만 CPC 1,096원으로 고비용. <strong>클릭 품질은 네이버, 볼륨 효율은 구글</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-1-2">
+    <div class="card">
+      <div class="card-title">채널별 전체 광고비 구조</div>
+      <div style="margin-top:12px">
+        <div class="cmp-row">
+          <span class="cmp-label ch-fb">페이스북</span>
+          <div class="cmp-bar-wrap">
+            <div class="cmp-bar" style="width:42.4%; background: linear-gradient(90deg, #6d28d9, #8b5cf6);">
+              <span class="cmp-val" style="color:white">42.4%</span>
+            </div>
+          </div>
+        </div>
+        <div class="cmp-row">
+          <span class="cmp-label ch-naver">네이버검색</span>
+          <div class="cmp-bar-wrap">
+            <div class="cmp-bar" style="width:32.6%; background: linear-gradient(90deg, #047857, #10b981);">
+              <span class="cmp-val" style="color:white">32.6%</span>
+            </div>
+          </div>
+        </div>
+        <div class="cmp-row">
+          <span class="cmp-label ch-google">구글</span>
+          <div class="cmp-bar-wrap">
+            <div class="cmp-bar" style="width:24.9%; background: linear-gradient(90deg, #1d4ed8, #3b82f6);">
+              <span class="cmp-val" style="color:white">24.9%</span>
+            </div>
+          </div>
+        </div>
+        <div class="highlight-box" style="margin-top:16px">
+          <p>💡 예산 배분과 CPI 효율이 <strong>역방향</strong>. 가장 비싼 네이버에 32.6%, 가장 싼 구글엔 24.9% 투입.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">채널별 월간 앱설치 비교</div>
+      <canvas id="channelInstallBar"></canvas>
+    </div>
+  </div>
+
+  <div class="card full">
+    <div class="card-title">채널별 성과 종합 테이블</div>
+    <table>
+      <thead>
+        <tr>
+          <th>채널</th><th>광고노출</th><th>광고클릭</th><th>CTR</th><th>광고비</th><th>앱설치</th><th>CPI</th><th>회원가입</th><th>CPR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong class="ch-google">구글</strong></td>
+          <td class="mono">28.1억</td><td class="mono">1,776만</td>
+          <td><span style="color:var(--muted)">0.63%</span></td>
+          <td class="mono">68.1억</td><td class="mono">1,088만</td>
+          <td><span style="color:var(--green); font-weight:700">384원</span></td>
+          <td class="mono">756만</td>
+          <td class="mono">862원</td>
+        </tr>
+        <tr>
+          <td><strong class="ch-fb">페이스북</strong></td>
+          <td class="mono">16.7억</td><td class="mono">2,113만</td>
+          <td><span style="color:var(--accent)">1.27%</span></td>
+          <td class="mono">115.9억</td><td class="mono">1,165만</td>
+          <td><span style="color:var(--yellow); font-weight:700">548원</span></td>
+          <td class="mono">811만</td>
+          <td class="mono">1,371원</td>
+        </tr>
+        <tr>
+          <td><strong class="ch-naver">네이버검색</strong></td>
+          <td class="mono">0.73억</td><td class="mono">813만</td>
+          <td><span style="color:var(--green); font-weight:700">11.08%</span></td>
+          <td class="mono">89.1억</td><td class="mono">391만</td>
+          <td><span style="color:var(--red); font-weight:700">2,280원</span></td>
+          <td class="mono">272만</td>
+          <td class="mono">3,277원</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE 3: FUNNEL ══════════════════ -->
+<div class="page" id="page-funnel">
+  <div class="section-title">전환 퍼널 분석 <span>설치 → 반복사용 8단계 전환율</span></div>
+
+  <div class="grid-2-1">
+    <div class="card">
+      <div class="card-title"><span class="num">7</span> 전체 전환 퍼널 (연간 누적)</div>
+      <div class="insight-tag tag-purple">핵심 이탈 구간</div>
+      <div class="funnel-wrap" id="funnelViz"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">주요 전환율 요약</div>
+      <div style="margin-top:8px">
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px">광고노출 → 클릭 (CTR)</div>
+          <div style="font-size:28px; font-weight:900; font-family:'JetBrains Mono',monospace; color:var(--muted)">1.03%</div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px">클릭 → 앱설치</div>
+          <div style="font-size:28px; font-weight:900; font-family:'JetBrains Mono',monospace; color:var(--accent2)">56.2%</div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px">앱설치 → 회원가입</div>
+          <div style="font-size:28px; font-weight:900; font-family:'JetBrains Mono',monospace; color:var(--green)">69.6%</div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px">첫거래 → 반복사용 ⚠️</div>
+          <div style="font-size:28px; font-weight:900; font-family:'JetBrains Mono',monospace; color:var(--yellow)">63.7%</div>
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px">계좌개설 → 자동이체 ⚠️</div>
+          <div style="font-size:28px; font-weight:900; font-family:'JetBrains Mono',monospace; color:var(--red)">7.2%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="num">8</span> 리타겟 vs 논타겟 전환율 비교</div>
+      <div class="insight-tag tag-green">타겟팅 효과</div>
+      <canvas id="targetingFunnel"></canvas>
+      <div class="highlight-box">
+        <p>📌 리타겟은 설치전환율 62.5%, 논타겟은 48.1%. 리타겟이 <strong>30% 더 효율적</strong>. 리타겟 예산 확대 권장.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">캠페인 목표별 최종 전환 비교</div>
+      <div class="insight-tag tag-blue">목표 달성률</div>
+      <canvas id="objectiveFunnel"></canvas>
+      <div class="highlight-box">
+        <p>📌 계좌개설 캠페인: 계좌 실전환율 76.2%. 회원가입 캠페인: 회원 전환율 82.0%. <strong>각 목표 캠페인이 해당 KPI 달성에서 우세</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card full">
+    <div class="card-title"><span class="num">9</span> 월별 핵심 전환율 히트맵</div>
+    <div class="insight-tag tag-cyan">계절성 전환 패턴</div>
+    <canvas id="monthlyFunnelLine" style="max-height:240px"></canvas>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE 4: CREATIVE ══════════════════ -->
+<div class="page" id="page-creative">
+  <div class="section-title">소재 형식 분석 <span>이미지 · 영상 · 키워드 소재 성과 비교</span></div>
+
+  <div class="kpi-row" style="grid-template-columns: repeat(4,1fr)">
+    <div class="kpi" style="--accent-color:#3b82f6">
+      <div class="kpi-label">브랜드키워드 CTR</div>
+      <div class="kpi-val">13.3%</div>
+      <div class="kpi-sub">CPC 1,096원</div>
+      <span class="kpi-badge badge-up">최고 CTR</span>
+    </div>
+    <div class="kpi" style="--accent-color:#8b5cf6">
+      <div class="kpi-label">일반키워드 CTR</div>
+      <div class="kpi-val">8.9%</div>
+      <div class="kpi-sub">CPC 1,095원</div>
+      <span class="kpi-badge">고효율</span>
+    </div>
+    <div class="kpi" style="--accent-color:#10b981">
+      <div class="kpi-label">영상 소재 CTR</div>
+      <div class="kpi-val">0.95%</div>
+      <div class="kpi-sub">CPC 474원</div>
+      <span class="kpi-badge badge-up">이미지 대비 +20%</span>
+    </div>
+    <div class="kpi" style="--accent-color:#f59e0b">
+      <div class="kpi-label">이미지 소재 CTR</div>
+      <div class="kpi-val">0.79%</div>
+      <div class="kpi-sub">CPC 473원</div>
+      <span class="kpi-badge">기준선</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="num">10</span> 소재형식별 앱설치 CPI 비교</div>
+      <div class="insight-tag tag-red">비용 효율 역설</div>
+      <canvas id="creativeCPI"></canvas>
+      <div class="highlight-box">
+        <p>📌 브랜드키워드 CPI 2,071원 vs 이미지 소재 CPI 860원. <strong>CTR은 높지만 CPI는 2.4배 비싼 역설</strong>. 노출 볼륨 차이 때문 — 키워드는 이미 브랜드 인지 사용자를 확보하는 방어적 역할로 재정의 필요.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">소재형식별 CTR vs CPI 매트릭스</div>
+      <div class="insight-tag tag-purple">포지셔닝 분석</div>
+      <canvas id="creativeMatrix"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">소재형식별 회원가입 볼륨</div>
+      <canvas id="creativeVolume"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">채널 × 소재 교차 성과 테이블</div>
+      <table style="margin-top:8px">
+        <thead>
+          <tr><th>채널</th><th>소재</th><th>CPI</th><th>CTR</th><th>회원가입</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="ch-google">구글</td><td>영상</td><td class="mono" style="color:var(--green)">600원</td><td class="mono">0.69%</td><td class="mono">428만</td></tr>
+          <tr><td class="ch-google">구글</td><td>이미지</td><td class="mono" style="color:var(--green)">660원</td><td class="mono">0.58%</td><td class="mono">329만</td></tr>
+          <tr><td class="ch-fb">페이스북</td><td>영상</td><td class="mono" style="color:var(--yellow)">954원</td><td class="mono">1.38%</td><td class="mono">462만</td></tr>
+          <tr><td class="ch-fb">페이스북</td><td>이미지</td><td class="mono" style="color:var(--yellow)">1,048원</td><td class="mono">1.15%</td><td class="mono">349만</td></tr>
+          <tr><td class="ch-naver">네이버</td><td>브랜드KW</td><td class="mono" style="color:var(--red)">2,071원</td><td class="mono" style="color:var(--green)">13.29%</td><td class="mono">180만</td></tr>
+          <tr><td class="ch-naver">네이버</td><td>일반KW</td><td class="mono" style="color:var(--red)">2,690원</td><td class="mono" style="color:var(--green)">8.85%</td><td class="mono">92만</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE 5: INSIGHTS ══════════════════ -->
+<div class="page" id="page-insights">
+  <div class="section-title">10대 핵심 인사이트 <span>데이터 기반 전략적 발견사항</span></div>
+
+  <ul class="insight-list">
+    <li class="insight-item">
+      <div class="insight-num">1</div>
+      <div class="insight-content">
+        <div class="insight-title">🗓️ 시즌 패턴 — 3·9·12월 성수기 vs 1·7월 비수기</div>
+        <div class="insight-body">
+          3월(920억 노출), 9월(961억 노출), 12월(1,005억 노출)은 연간 최고 노출 월로 각각 금융 신규년도, 하반기 금융이슈, 연말 소비 시즌에 기인.
+          반면 1·7월은 노출과 광고비 모두 연간 최저 수준. CPC도 12월(716원)이 1월(492원)에 비해 45.5% 높아 성수기 경쟁 심화 확인.
+          <br><strong>→ 전략: 성수기 예산 20~30% 증액 사전 확보, 비수기엔 브랜딩 전환으로 단가 낮추기.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">2</div>
+      <div class="insight-content">
+        <div class="insight-title">💸 채널 CPI 역전 구조 — 구글이 네이버보다 5.9배 저렴</div>
+        <div class="insight-body">
+          구글 CPI 384원 vs 네이버검색 2,280원. 그러나 광고비 배분은 구글 24.9%, 네이버 32.6%로 CPI 효율과 예산 비중이 역방향.
+          네이버는 총 89.1억 집행했으나 설치 391만에 그침. 구글은 68.1억으로 설치 1,088만 달성.
+          <br><strong>→ 전략: 구글 예산 최소 10%p 증액(+27억), 네이버 브랜드 방어 목적으로 최소 비중 유지(15~18%)로 재편.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">3</div>
+      <div class="insight-content">
+        <div class="insight-title">🎯 리타겟팅이 논타겟 대비 설치전환율 30% 우수</div>
+        <div class="insight-body">
+          리타겟 광고그룹의 설치전환율(클릭→설치) 62.5%, 논타겟 48.1%.
+          회원가입 기준으로도 리타겟 11,547만 건 vs 논타겟 6,850만 건으로 약 69% 더 많은 성과 창출.
+          두 그룹의 CPC는 580원대로 동일하나 성과 차이가 뚜렷함.
+          <br><strong>→ 전략: 리타겟 예산 비중을 현 50%에서 60~65%로 확대, 퍼스트파티 데이터 풀 확충 필요.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">4</div>
+      <div class="insight-content">
+        <div class="insight-title">📱 설치→실행 이탈 10% — 온보딩 UX 첫 관문</div>
+        <div class="insight-body">
+          앱설치 2,645만 건 중 앱실행은 2,380만 건(90.0%). 즉 설치 직후 10%(265만 명)가 앱을 한 번도 실행하지 않음.
+          월별 편차는 89.96~90.03%로 매우 일정 — 계절 요인이 아닌 <strong>구조적 설치 품질 문제</strong> 또는 푸시 알림 차단 등 기술적 이슈.
+          <br><strong>→ 전략: 설치 직후 웰컴 푸시 알림 A/B 테스트, 인앱 첫 실행 딥링크 최적화.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">5</div>
+      <div class="insight-content">
+        <div class="insight-title">🏦 계좌개설 → 자동이체 전환율 7.2% — 최대 누수 지점</div>
+        <div class="insight-body">
+          계좌개설 완료 1,416만 건 중 자동이체 설정은 101만 건(7.2%)에 불과. 퍼널 전체에서 가장 급격한 이탈 구간.
+          자동이체는 장기 LTV를 결정하는 핵심 행동임에도 <strong>유도 UX와 인센티브가 부재</strong>한 것으로 추정.
+          <br><strong>→ 전략: 계좌개설 완료 화면에 자동이체 설정 즉시 유도 팝업 + 캐시백 인센티브 실험.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">6</div>
+      <div class="insight-content">
+        <div class="insight-title">🎬 영상 소재가 이미지 대비 CTR 20% 높고 비용 동일</div>
+        <div class="insight-body">
+          영상 소재 CTR 0.95% vs 이미지 소재 0.79%. CPC는 각각 474원 vs 473원으로 거의 동일.
+          즉 영상은 추가 비용 없이 20% 더 많은 클릭 획득. 설치 볼륨도 영상(1,278만) > 이미지(975만)으로 우세.
+          <br><strong>→ 전략: 영상 소재 비중을 현 55% 수준에서 65~70%로 확대. 15초 이내 UGC형 영상 A/B 테스트.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">7</div>
+      <div class="insight-content">
+        <div class="insight-title">🔄 첫거래 → 반복사용 전환율 63.7% — 재활성화 잠재력</div>
+        <div class="insight-body">
+          첫거래 724만 건 중 반복사용은 462만 건(63.7%). 36.3%(262만 명)는 1회 거래 후 이탈.
+          월별 편차 63.5~63.9%로 매우 일정해 <strong>구조적 이탈이며 시즌 영향 없음</strong>.
+          <br><strong>→ 전략: 첫거래 후 7일 내 리마케팅 시퀀스(3회 터치포인트) 구축, 재거래 쿠폰 or 포인트 리워드 설계.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">8</div>
+      <div class="insight-content">
+        <div class="insight-title">🔑 네이버 브랜드 키워드 CTR 13.3% — 고의향 사용자 확보 채널</div>
+        <div class="insight-body">
+          브랜드키워드 CTR 13.29% vs 일반키워드 8.85%. 비교 광고 채널(이미지/영상 1% 미만) 대비 압도적 고CTR.
+          CPI는 2,071원으로 비싸지만 가입 의향이 이미 높은 사용자를 확보하는 <strong>방어 + 하이인텐트 채널</strong>로 역할 분리 필요.
+          <br><strong>→ 전략: 브랜드키워드를 CPI 최적화 대상이 아닌 점유율 방어 지표로 관리 (예산 캡 설정 후 SOV 모니터링).</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">9</div>
+      <div class="insight-content">
+        <div class="insight-title">📊 페이스북이 회원가입 볼륨 최대 — 그러나 CPI 구글의 1.4배</div>
+        <div class="insight-body">
+          페이스북 회원가입 811만 건으로 채널 중 최대. 구글 756만, 네이버 272만 순.
+          그러나 CPI는 페이스북 548원, 구글 384원. 같은 예산을 구글에 투입 시 약 43% 더 많은 설치 가능.
+          페이스북은 <strong>볼륨 리더이지만 효율 측면에서 구글에 열세</strong>.
+          <br><strong>→ 전략: 페이스북 예산 일부(10~15%)를 구글로 이전 테스트. 단, 페이스북 소셜 확산 효과(추천완료) 별도 모니터링 필요.</strong>
+        </div>
+      </div>
+    </li>
+    <li class="insight-item">
+      <div class="insight-num">10</div>
+      <div class="insight-content">
+        <div class="insight-title">📣 추천(바이럴) 전환율 6.99% — 유기적 성장 엔진 저활용</div>
+        <div class="insight-body">
+          반복사용 462만 건 중 추천완료는 50.6만 건(10.95%). 회원가입 기준으로 환산 시 추천전환율 2.75%.
+          단, 추천완료된 사용자는 광고 비용 없이 획득 — CAC=0인 최고가치 사용자.
+          현재 추천 비중이 매우 낮아 <strong>리퍼럴 프로그램 설계가 미흡</strong>한 것으로 판단.
+          <br><strong>→ 전략: 양면형 리퍼럴 프로그램 구축(추천인+피추천인 모두 리워드). 목표: 추천 전환율 2배 향상 시 광고비 연 10억 절감 효과.</strong>
+        </div>
+      </div>
+    </li>
+  </ul>
+
+  <div class="card" style="margin-top:24px; background:linear-gradient(135deg, rgba(59,130,246,.1), rgba(139,92,246,.1)); border-color:rgba(59,130,246,.3)">
+    <div class="card-title" style="color:var(--accent2)">종합 전략 방향 요약</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-top:12px">
+      <div>
+        <div style="font-size:11px; color:var(--accent); font-weight:700; letter-spacing:1px; margin-bottom:8px">📉 비용 최적화</div>
+        <div style="font-size:12px; color:var(--text); line-height:1.8">구글 예산 비중 ↑<br>네이버 예산 상한 설정<br>영상 소재 비중 65%↑<br>리타겟 비중 60%↑</div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--green); font-weight:700; letter-spacing:1px; margin-bottom:8px">📈 전환율 개선</div>
+        <div style="font-size:12px; color:var(--text); line-height:1.8">설치→실행 UX 개선<br>계좌→자동이체 인센티브<br>첫거래→반복 리마케팅<br>온보딩 퍼널 A/B 테스트</div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--accent3); font-weight:700; letter-spacing:1px; margin-bottom:8px">🚀 성장 가속</div>
+        <div style="font-size:12px; color:var(--text); line-height:1.8">양면형 리퍼럴 프로그램<br>성수기(3·9·12월) 집중 투자<br>고의향 사용자 별도 세그먼트<br>LTV 기반 예산 배분 전환</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ── DATA ──
+const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+const monthImpressions = [333887979,316762845,445496922,357843617,385797844,337075871,332253131,350760619,460656554,395050883,384910432,451005662];
+const monthClicks = [3439803,3267177,4637350,3704059,3976236,3495268,3413317,3613803,4732374,4073488,4005607,4669883];
+const monthBudget = [1694035000,1695265000,2920917000,2024717000,2276923000,1725297000,1680650000,1866918000,3101708000,2444436000,2540374000,3345224000];
+const monthInstall = [1947928,1793627,2621175,2096560,2252982,1925929,1927388,2044606,2680112,2306504,2204744,2644067];
+const monthReg = [1354639,1249959,1824183,1457660,1565882,1340931,1340130,1422645,1863698,1603990,1535018,1838386];
+const monthCPC = monthBudget.map((b,i)=> b/monthClicks[i]);
+
+const googleCPI = [527.9,572.4,673.2,585.0,614.8,541.1,529.1,556.1,704.7,643.3,691.4,769.8];
+const fbCPI    = [837.6,909.8,1070.2,928.9,973.3,860.4,839.0,882.3,1115.2,1024.1,1103.8,1217.9];
+const naverCPI = [1915.2,2089.4,2449.7,2134.8,2241.3,1976.1,1926.7,2009.7,2552.8,2359.8,2526.8,2798.6];
+
+const glDefaults = {
+  responsive: true,
+  plugins: { legend: { labels: { color:'#94a3b8', font:{size:11} } } },
+  scales: {
+    x: { ticks:{color:'#64748b', font:{size:11}}, grid:{color:'rgba(255,255,255,.04)'} },
+    y: { ticks:{color:'#64748b', font:{size:11}}, grid:{color:'rgba(255,255,255,.04)'} }
+  }
+};
+
+// Switch page
+function switchPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── CHARTS ──
+window.addEventListener('DOMContentLoaded', () => {
+
+  // 1. Monthly Impressions
+  new Chart(document.getElementById('monthlyImpressions'), {
+    type:'bar',
+    data:{ labels:months, datasets:[{
+      label:'광고노출',
+      data: monthImpressions.map(v=>v/1e8),
+      backgroundColor: months.map((_,i)=>[2,8,11].includes(i)?'rgba(59,130,246,.9)':'rgba(59,130,246,.35)'),
+      borderRadius:4
+    }]},
+    options:{ ...glDefaults, plugins:{...glDefaults.plugins, legend:{display:false}},
+      scales:{...glDefaults.scales, y:{...glDefaults.scales.y, title:{display:true,text:'억 노출',color:'#64748b',font:{size:10}}}},
+      animation:{duration:800}
+    }
+  });
+
+  // 2. Monthly CPC
+  new Chart(document.getElementById('monthlyCPC'), {
+    type:'line',
+    data:{ labels:months, datasets:[{
+      label:'CPC(원)',
+      data: monthCPC.map(v=>Math.round(v)),
+      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.1)',
+      fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#f59e0b'
+    }]},
+    options:{ ...glDefaults, plugins:{...glDefaults.plugins, legend:{display:false}},
+      scales:{...glDefaults.scales, y:{...glDefaults.scales.y, title:{display:true,text:'원',color:'#64748b',font:{size:10}}}}
+    }
+  });
+
+  // 3. Channel Budget Pie
+  new Chart(document.getElementById('channelBudgetPie'), {
+    type:'doughnut',
+    data:{ labels:['페이스북','네이버검색','구글'],
+      datasets:[{ data:[42.4,32.6,24.9],
+        backgroundColor:['rgba(139,92,246,.8)','rgba(16,185,129,.8)','rgba(59,130,246,.8)'],
+        borderColor:['#8b5cf6','#10b981','#3b82f6'], borderWidth:2 }]
+    },
+    options:{ ...glDefaults, cutout:'65%',
+      plugins:{ legend:{labels:{color:'#94a3b8',font:{size:11}}},
+        tooltip:{callbacks:{label:(ctx)=>ctx.label+': '+ctx.parsed+'%'}} }
+    }
+  });
+
+  // 4. Channel CTR
+  new Chart(document.getElementById('channelCTR'), {
+    type:'bar',
+    data:{ labels:['구글','페이스북','네이버검색'],
+      datasets:[{
+        label:'CTR(%)',
+        data:[0.63,1.27,11.08],
+        backgroundColor:['rgba(59,130,246,.8)','rgba(139,92,246,.8)','rgba(16,185,129,.8)'],
+        borderRadius:6
+      }]
+    },
+    options:{ ...glDefaults, indexAxis:'y', plugins:{legend:{display:false}} }
+  });
+
+  // 5. Objective Bar
+  new Chart(document.getElementById('objectiveBar'), {
+    type:'bar',
+    data:{
+      labels:['계좌개설 캠페인','회원가입 캠페인'],
+      datasets:[
+        { label:'앱설치', data:[12690525/1e6,13755097/1e6], backgroundColor:'rgba(59,130,246,.7)', borderRadius:3 },
+        { label:'회원가입', data:[7997471/1e6,10399650/1e6], backgroundColor:'rgba(16,185,129,.7)', borderRadius:3 },
+        { label:'계좌개설', data:[7917790/1e6,6237838/1e6], backgroundColor:'rgba(139,92,246,.7)', borderRadius:3 }
+      ]
+    },
+    options:{ ...glDefaults, scales:{...glDefaults.scales, y:{...glDefaults.scales.y,title:{display:true,text:'백만 건',color:'#64748b',font:{size:10}}}}}
+  });
+
+  // 6. Monthly Conversion
+  new Chart(document.getElementById('monthlyConversion'), {
+    type:'line',
+    data:{ labels:months, datasets:[
+      { label:'앱설치', data:monthInstall.map(v=>v/1e4), borderColor:'#3b82f6', tension:.4, fill:false, pointRadius:3 },
+      { label:'회원가입', data:monthReg.map(v=>v/1e4), borderColor:'#10b981', tension:.4, fill:false, pointRadius:3 }
+    ]},
+    options:{ ...glDefaults, scales:{...glDefaults.scales, y:{...glDefaults.scales.y,title:{display:true,text:'만 건',color:'#64748b',font:{size:10}}}}}
+  });
+
+  // 7. Quarterly
+  new Chart(document.getElementById('quarterlyPerf'), {
+    type:'bar',
+    data:{
+      labels:['Q1','Q2','Q3','Q4'],
+      datasets:[
+        { label:'광고비(억)', data:[
+          (1694+1695+2921)/100,
+          (2025+2277+1725)/100,
+          (1681+1867+3102)/100,
+          (2444+2540+3345)/100
+        ], backgroundColor:'rgba(59,130,246,.6)', borderRadius:4, yAxisID:'y' },
+        { label:'회원가입(만)', data:[
+          (1354639+1249959+1824183)/10000,
+          (1457660+1565882+1340931)/10000,
+          (1340130+1422645+1863698)/10000,
+          (1603990+1535018+1838386)/10000
+        ], type:'line', borderColor:'#10b981', pointRadius:5, tension:.3, yAxisID:'y1' }
+      ]
+    },
+    options:{
+      ...glDefaults,
+      scales:{
+        x:{ticks:{color:'#64748b'}, grid:{color:'rgba(255,255,255,.04)'}},
+        y:{position:'left', ticks:{color:'#64748b',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, title:{display:true,text:'억원',color:'#64748b',font:{size:10}}},
+        y1:{position:'right', ticks:{color:'#64748b',font:{size:10}}, grid:{display:false}, title:{display:true,text:'만건',color:'#64748b',font:{size:10}}}
+      }
+    }
+  });
+
+  // ── FUNNEL VIZ ──
+  const funnelData = [
+    {label:'광고노출', val:4551502359, pct:100, fmt:'45.5억'},
+    {label:'광고클릭', val:47028365, pct:1.03, fmt:'4,703만'},
+    {label:'앱설치', val:26445622, pct:56.2, fmt:'2,645만'},
+    {label:'앱실행', val:23799277, pct:89.99, fmt:'2,380만'},
+    {label:'회원가입', val:18397121, pct:77.3, fmt:'1,840만'},
+    {label:'계좌개설', val:14155628, pct:76.9, fmt:'1,416만'},
+    {label:'첫거래', val:7243732, pct:51.2, fmt:'724만'},
+    {label:'반복사용', val:4617161, pct:63.7, fmt:'462만'},
+    {label:'자동이체설정', val:1012122, pct:21.9, fmt:'101만'},
+    {label:'추천완료', val:506229, pct:50.0, fmt:'50.6만'}
+  ];
+  const funnelColors = ['#3b82f6','#2563eb','#1d4ed8','#1e40af','#10b981','#059669','#f59e0b','#d97706','#ef4444','#dc2626'];
+  const funnelWrap = document.getElementById('funnelViz');
+  funnelData.forEach((d,i)=>{
+    const maxBarW = Math.max(10, (d.val / funnelData[0].val) * 100);
+    funnelWrap.innerHTML += `
+      <div class="funnel-step">
+        <span class="funnel-label">${d.label}</span>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${maxBarW}%; background:${funnelColors[i]}">
+            <span style="color:white; font-size:11px">${d.fmt}</span>
+          </div>
+        </div>
+        <span class="funnel-pct">${i===0?'기준':d.pct+'%'}</span>
+      </div>
+      ${i<funnelData.length-1?'<div class="arrow-down">▼</div>':''}
+    `;
+  });
+
+  // 8. Channel CPI Trend
+  new Chart(document.getElementById('channelCPITrend'), {
+    type:'line',
+    data:{ labels:months, datasets:[
+      { label:'구글', data:googleCPI, borderColor:'#3b82f6', tension:.4, pointRadius:3, fill:false },
+      { label:'페이스북', data:fbCPI, borderColor:'#8b5cf6', tension:.4, pointRadius:3, fill:false },
+      { label:'네이버검색', data:naverCPI, borderColor:'#ef4444', tension:.4, pointRadius:3, fill:false }
+    ]},
+    options:{ ...glDefaults, scales:{...glDefaults.scales, y:{...glDefaults.scales.y, title:{display:true,text:'CPI(원)',color:'#64748b',font:{size:10}}}}}
+  });
+
+  // 9. Channel Scatter (CTR vs CPC)
+  new Chart(document.getElementById('channelScatter'), {
+    type:'bubble',
+    data:{ datasets:[
+      { label:'구글', data:[{x:0.63,y:384,r:20}], backgroundColor:'rgba(59,130,246,.7)' },
+      { label:'페이스북', data:[{x:1.27,y:548,r:25}], backgroundColor:'rgba(139,92,246,.7)' },
+      { label:'네이버검색', data:[{x:11.08,y:1096,r:15}], backgroundColor:'rgba(16,185,129,.7)' }
+    ]},
+    options:{
+      ...glDefaults,
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, title:{display:true,text:'CTR(%)',color:'#64748b',font:{size:10}}},
+        y:{ticks:{color:'#64748b',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, title:{display:true,text:'CPC(원)',color:'#64748b',font:{size:10}}}
+      }
+    }
+  });
+
+  // 10. Channel Install Bar
+  const chMonths = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+  const gInstall = [798098,741579,1078777,859062,936996,795409,799413,843755,1102623,956292,892376,1080324];
+  const fbInstall = [862514,786141,1148001,928443,984701,841749,841712,900820,1184190,1015905,978745,1178362];
+  const nInstall = [287316,265907,394397,309055,331285,288771,286263,300031,393299,334307,333623,385381];
+  new Chart(document.getElementById('channelInstallBar'), {
+    type:'bar',
+    data:{ labels:chMonths, datasets:[
+      { label:'구글', data:gInstall.map(v=>v/1e4), backgroundColor:'rgba(59,130,246,.7)', borderRadius:2 },
+      { label:'페이스북', data:fbInstall.map(v=>v/1e4), backgroundColor:'rgba(139,92,246,.7)', borderRadius:2 },
+      { label:'네이버', data:nInstall.map(v=>v/1e4), backgroundColor:'rgba(16,185,129,.7)', borderRadius:2 }
+    ]},
+    options:{ ...glDefaults, scales:{...glDefaults.scales, y:{...glDefaults.scales.y,stacked:false,title:{display:true,text:'만 건',color:'#64748b',font:{size:10}}}}}
+  });
+
+  // 11. Targeting Funnel
+  new Chart(document.getElementById('targetingFunnel'), {
+    type:'radar',
+    data:{
+      labels:['설치전환율','실행전환율','회원전환율','계좌전환율','첫거래전환율','반복사용전환율'],
+      datasets:[
+        { label:'리타겟', data:[62.5,90.0,77.3,76.9,51.2,63.7], borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.1)', pointRadius:4 },
+        { label:'논타겟', data:[48.1,90.0,77.3,76.9,51.2,63.7], borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.1)', pointRadius:4 }
+      ]
+    },
+    options:{
+      responsive:true,
+      scales:{ r:{ ticks:{color:'#64748b',font:{size:9}, backdropColor:'transparent'}, grid:{color:'rgba(255,255,255,.1)'}, pointLabels:{color:'#94a3b8',font:{size:10}} } },
+      plugins:{ legend:{labels:{color:'#94a3b8',font:{size:11}}} }
+    }
+  });
+
+  // 12. Objective Funnel
+  new Chart(document.getElementById('objectiveFunnel'), {
+    type:'bar',
+    data:{
+      labels:['회원가입','계좌개설','첫거래','반복사용'],
+      datasets:[
+        { label:'계좌개설캠페인', data:[7997471/1e4,7917790/1e4,4748539/1e4,3419048/1e4], backgroundColor:'rgba(59,130,246,.7)', borderRadius:4 },
+        { label:'회원가입캠페인', data:[10399650/1e4,6237838/1e4,2495193/1e4,1198113/1e4], backgroundColor:'rgba(16,185,129,.7)', borderRadius:4 }
+      ]
+    },
+    options:{ ...glDefaults, scales:{...glDefaults.scales, y:{...glDefaults.scales.y,title:{display:true,text:'만 건',color:'#64748b',font:{size:10}}}}}
+  });
+
+  // 13. Monthly Funnel Line
+  const install2run = [89.98,90.01,90.00,90.00,89.99,90.03,90.01,89.99,89.97,89.96,89.98,90.01];
+  const run2reg = [77.29,77.42,77.33,77.25,77.23,77.34,77.25,77.32,77.29,77.30,77.37,77.25];
+  const reg2acct = [76.86,76.74,76.87,77.12,77.27,77.07,76.93,76.79,76.91,76.87,76.84,77.04];
+  new Chart(document.getElementById('monthlyFunnelLine'), {
+    type:'line',
+    data:{ labels:months, datasets:[
+      { label:'설치→실행(%)', data:install2run, borderColor:'#3b82f6', tension:.4, pointRadius:3 },
+      { label:'실행→가입(%)', data:run2reg, borderColor:'#10b981', tension:.4, pointRadius:3 },
+      { label:'가입→계좌(%)', data:reg2acct, borderColor:'#f59e0b', tension:.4, pointRadius:3 }
+    ]},
+    options:{ ...glDefaults, scales:{...glDefaults.scales, y:{...glDefaults.scales.y, min:70, max:95, title:{display:true,text:'전환율(%)',color:'#64748b',font:{size:10}}}}}
+  });
+
+  // 14. Creative CPI
+  new Chart(document.getElementById('creativeCPI'), {
+    type:'bar',
+    data:{
+      labels:['이미지','영상','브랜드키워드','일반키워드'],
+      datasets:[{ label:'CPI(원)', data:[860,784,2071,2690],
+        backgroundColor:['rgba(16,185,129,.7)','rgba(16,185,129,.7)','rgba(239,68,68,.7)','rgba(239,68,68,.7)'],
+        borderRadius:6
+      }]
+    },
+    options:{ ...glDefaults, indexAxis:'y', plugins:{legend:{display:false}},
+      scales:{...glDefaults.scales, x:{...glDefaults.scales.x, title:{display:true,text:'CPI(원)',color:'#64748b',font:{size:10}}}}
+    }
+  });
+
+  // 15. Creative Matrix (CTR vs CPI Bubble)
+  new Chart(document.getElementById('creativeMatrix'), {
+    type:'bubble',
+    data:{ datasets:[
+      { label:'이미지', data:[{x:0.79,y:860,r:20}], backgroundColor:'rgba(59,130,246,.7)' },
+      { label:'영상', data:[{x:0.95,y:784,r:22}], backgroundColor:'rgba(16,185,129,.7)' },
+      { label:'브랜드KW', data:[{x:13.29,y:2071,r:15}], backgroundColor:'rgba(245,158,11,.7)' },
+      { label:'일반KW', data:[{x:8.85,y:2690,r:12}], backgroundColor:'rgba(239,68,68,.7)' }
+    ]},
+    options:{
+      ...glDefaults,
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, title:{display:true,text:'CTR(%)',color:'#64748b',font:{size:10}}},
+        y:{ticks:{color:'#64748b',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, title:{display:true,text:'CPI(원)',color:'#64748b',font:{size:10}}}
+      }
+    }
+  });
+
+  // 16. Creative Volume
+  new Chart(document.getElementById('creativeVolume'), {
+    type:'doughnut',
+    data:{
+      labels:['영상(구글+FB)','이미지(구글+FB)','브랜드키워드','일반키워드'],
+      datasets:[{ data:[8894982,6784106,1800490,917543],
+        backgroundColor:['rgba(16,185,129,.8)','rgba(59,130,246,.8)','rgba(245,158,11,.8)','rgba(139,92,246,.8)'],
+        borderWidth:2
+      }]
+    },
+    options:{ ...glDefaults, cutout:'60%' }
+  });
+
+});
+</script>
+</body>
+</html>
